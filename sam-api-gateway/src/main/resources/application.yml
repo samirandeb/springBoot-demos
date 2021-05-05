@@ -1,0 +1,57 @@
+management:
+  endpoint:
+    gateway:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  
+#eureka:
+#  client:
+#    enabled: true
+ 
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: rewrite-route
+        uri: lb://app-services
+        predicates:
+        - Path=/sam/**
+        filters:
+        - RewritePath=/sam(?<segment>/?.*), $\{segment}
+      - id: strip-prefix
+        uri: lb://app-services
+        predicates:
+        - Path=/strip/**
+        filters:
+        - StripPrefix=1
+      - id: method_route
+        uri: https://httpbin.org
+        predicates:
+        - Path=/get/**
+        filters:
+        - RewritePath=/get(?<segment>/?.*), $\{segment}
+      - id: circuitbreaker_route
+        uri: https://httpbin.org
+        predicates:
+        - Path=/status/504
+        filters:
+        - name: CircuitBreaker
+          args:
+            name: myCircuitBreaker
+            fallbackUri: forward:/anything
+        - RewritePath=/status/504, /anything
+      metrics:
+        enabled: true
+      discovery:
+        locator:
+          enabled: true
+    loadbalancer:
+      ribbon:
+        enabled: false
+  application:
+    name: sam-gateway
+    
